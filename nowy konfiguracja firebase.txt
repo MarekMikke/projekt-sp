@@ -1,0 +1,9 @@
+const firebaseConfig = {
+  apiKey: "AIzaSyAJB3DxLtFFOvC2OpTxLAbpr4rJUfCyOwo",
+  authDomain: "projekt-sp.firebaseapp.com",
+  databaseURL: "https://projekt-sp-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "projekt-sp",
+  storageBucket: "projekt-sp.firebasestorage.app",
+  messagingSenderId: "485520309533",
+  appId: "1:485520309533:web:cbf484593a3df15c58f5f4"
+};
