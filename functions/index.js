@@ -1,14 +1,18 @@
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
-admin.initializeApp();
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { initializeApp } = require('firebase-admin/app');
+const { getDatabase } = require('firebase-admin/database');
+
+initializeApp();
 
 const strefa = 'Europe/Warsaw';
 
-exports.agregujDziennie = functions.pubsub
-  .schedule('30 0 * * *')
-  .timeZone(strefa)
-  .onRun(async () => {
-    const db = admin.database();
+exports.agregujDziennie = onSchedule(
+  {
+    schedule: '30 0 * * *',
+    timeZone: strefa,
+  },
+  async (event) => {
+    const db = getDatabase();
     const czujnikiSnap = await db.ref('czujniki').once('value');
     const czujniki = czujnikiSnap.val();
 
@@ -67,5 +71,5 @@ exports.agregujDziennie = functions.pubsub
     }
 
     console.log('✔️ Agregacja zakończona');
-    return null;
-  });
+  }
+);

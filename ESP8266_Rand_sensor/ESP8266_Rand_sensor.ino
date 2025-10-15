@@ -83,5 +83,5 @@ void loop() {
   }
 
   client.stop();
-  delay(10000); // co 10 sekund
+  delay(300000); // co 10 sekund
 }
