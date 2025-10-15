@@ -7,6 +7,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
 <body>
   <header>
@@ -31,8 +32,6 @@
       <select id="typWykresu">
         <option value="minutowy">Minutowy (5-min)</option>
         <option value="dzienny">Dzienny (średnie)</option>
-        <option value="tygodniowy">Tygodniowy</option>
-        <option value="miesieczny">Miesięczny</option>
         <option value="zakres">Zakres od–do</option>
       </select>
 
@@ -43,6 +42,7 @@
       <input type="datetime-local" id="do">
 
       <button onclick="generujWykres()">Generuj wykres</button>
+	  <button onclick="eksportujWykres()">Eksportuj do PNG</button>
     </div>
 
     <canvas id="wykres" width="800" height="400" style="margin-top: 30px;"></canvas>
@@ -50,13 +50,13 @@
 
   <script>
     const firebaseConfig = {
-      apiKey: "TWOJE_API_KEY",
+      apiKey: "AIzaSyAJB3DxLtFFOvC2OpTxLAbpr4rJUfCyOwo",
       authDomain: "projekt-sp.firebaseapp.com",
       databaseURL: "https://projekt-sp-default-rtdb.europe-west1.firebasedatabase.app",
       projectId: "projekt-sp",
-      storageBucket: "projekt-sp.appspot.com",
-      messagingSenderId: "TWOJE_ID",
-      appId: "TWOJE_APP_ID"
+      storageBucket: "projekt-sp.firebasestorage.app",
+      messagingSenderId: "485520309533",
+      appId: "1:485520309533:web:cbf484593a3df15c58f5f4"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -64,7 +64,6 @@
     const select = document.getElementById("listaCzujnikow");
     let wykres = null;
 
-    // Załaduj listę czujników
     db.ref("czujniki").once("value", (snapshot) => {
       const czujniki = snapshot.val();
       for (let id in czujniki) {
@@ -78,11 +77,11 @@
     function generujWykres() {
       const czujnikId = select.value;
       const typ = document.getElementById("typWykresu").value;
-      const od = document.getElementById("od").value;
-      const do_ = document.getElementById("do").value;
+      const od = new Date(document.getElementById("od").value);
+      const do_ = new Date(document.getElementById("do").value);
 
-      if (!czujnikId || !od || !do_) {
-        alert("Wybierz czujnik i zakres czasu.");
+      if (!czujnikId || isNaN(od) || isNaN(do_)) {
+        alert("Wybierz czujnik i poprawny zakres czasu.");
         return;
       }
 
@@ -91,24 +90,28 @@
         const dane = snapshot.val();
         if (!dane) return;
 
-        const pomiary = Object.entries(dane)
-          .filter(([ts]) => {
-            const t = new Date(ts.replace(/_/g, ":"));
-            return t >= new Date(od) && t <= new Date(do_);
-          })
-          .map(([ts, val]) => ({ ts, ...val }));
+        const pomiary = Object.values(dane)
+          .filter(p => {
+            const t = new Date(p.timestamp);
+            return t >= od && t <= do_;
+          });
+
+        if (pomiary.length === 0) {
+          alert("Brak danych w wybranym zakresie.");
+          return;
+        }
 
         if (typ === "minutowy" || typ === "zakres") {
-          const labels = pomiary.map(p => p.ts.replace("T", " ").replace(/_/g, ":"));
+          const czasy = pomiary.map(p => new Date(p.timestamp));
           const temperatury = pomiary.map(p => p.temperatura);
           const wilgotnosci = pomiary.map(p => p.wilgotnosc);
-          rysujWykres(labels, temperatury, wilgotnosci);
+          rysujWykresCzasowy(czasy, temperatury, wilgotnosci, od, do_);
         } else {
           const agregaty = agregujDziennie(pomiary);
-          const labels = agregaty.map(p => p.dzien);
+          const czasy = agregaty.map(p => new Date(p.dzien));
           const temperatury = agregaty.map(p => p.temp);
           const wilgotnosci = agregaty.map(p => p.wilg);
-          rysujWykres(labels, temperatury, wilgotnosci);
+          rysujWykresCzasowy(czasy, temperatury, wilgotnosci, od, do_);
         }
       });
     }
@@ -116,7 +119,7 @@
     function agregujDziennie(pomiary) {
       const grupy = {};
       pomiary.forEach(p => {
-        const dzien = p.ts.split("T")[0];
+        const dzien = p.timestamp.split("T")[0];
         if (!grupy[dzien]) grupy[dzien] = [];
         grupy[dzien].push(p);
       });
@@ -129,24 +132,26 @@
       });
     }
 
-    function rysujWykres(labels, temperatury, wilgotnosci) {
+    function rysujWykresCzasowy(czasy, temperatury, wilgotnosci, od, do_) {
       const ctx = document.getElementById('wykres').getContext('2d');
       if (wykres) wykres.destroy();
+
+      const daneTemp = czasy.map((czas, i) => ({ x: czas, y: temperatury[i] }));
+      const daneWilg = czasy.map((czas, i) => ({ x: czas, y: wilgotnosci[i] }));
 
       wykres = new Chart(ctx, {
         type: 'line',
         data: {
-          labels,
           datasets: [
             {
               label: 'Temperatura (°C)',
-              data: temperatury,
+              data: daneTemp,
               borderColor: '#ff6384',
               fill: false
             },
             {
               label: 'Wilgotność (%)',
-              data: wilgotnosci,
+              data: daneWilg,
               borderColor: '#36a2eb',
               fill: false
             }
@@ -158,12 +163,38 @@
             legend: { position: 'top' }
           },
           scales: {
-            x: { title: { display: true, text: 'Czas pomiaru' } },
-            y: { title: { display: true, text: 'Wartość' } }
+            x: {
+              type: 'time',
+              min: od,
+              max: do_,
+              time: {
+                unit: 'hour',
+                displayFormats: {
+                  hour: 'HH:mm'
+                }
+              },
+              title: {
+                display: true,
+                text: 'Czas pomiaru'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Wartość'
+              }
+            }
           }
         }
       });
     }
+	function eksportujWykres() {
+  const canvas = document.getElementById("wykres");
+  const link = document.createElement("a");
+  link.download = "wykres.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
   </script>
 </body>
-</html>
+</html>		
