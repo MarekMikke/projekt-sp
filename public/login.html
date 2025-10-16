@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="mini-logo.png">
+    <title>Logowanie - Monitoring temperatury</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Dodatkowe style dla formularza logowania */
+        .login-form-container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .login-form-container h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input[type="email"],
+        .form-group input[type="password"] {
+            width: calc(100% - 20px); /* Odejmowanie paddingu */
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        .login-button {
+            width: 100%;
+            padding: 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .login-button:hover {
+            background-color: #2980b9;
+        }
+        .error-message {
+            color: #e74c3c;
+            margin-top: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+  <header>
+    <h1>System monitoringu temperatury i wilgotności</h1>
+    <nav>
+      <ul>
+        <li><a href="index.html">Strona główna</a></li>
+        <li><a href="czujniki.html">Dostępne urządzenia</a></li>
+        <li><a href="dane.html">Dane pomiarowe</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <div class="login-form-container">
+      <h2>Zaloguj się</h2>
+      <div class="form-group">
+        <label for="email">E-mail:</label>
+        <input type="email" id="email" placeholder="Wprowadź swój adres e-mail" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Hasło:</label>
+        <input type="password" id="password" placeholder="Wprowadź swoje hasło" required>
+      </div>
+      <button class="login-button" id="login-button">Zaloguj</button>
+      <p id="error-message" class="error-message" style="display: none;"></p>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Marek – Projekt SP</p>
+  </footer>
+
+
+  <!-- Firebase SDK Scripts -->
+  <script type="module">
+		// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+		const firebaseConfig = {
+		  apiKey: "AIzaSyAJB3DxLtFFOvC2OpTxLAbpr4rJUfCyOwo",
+		  authDomain: "projekt-sp.firebaseapp.com",
+		  databaseURL: "https://projekt-sp-default-rtdb.europe-west1.firebasedatabase.app",
+		  projectId: "projekt-sp",
+		  storageBucket: "projekt-sp.firebasestorage.app",
+		  messagingSenderId: "485520309533",
+		  appId: "1:485520309533:web:cbf484593a3df15c58f5f4",
+		  measurementId: "G-STCT52Y98E"
+		};
+
+
+        // Zmienione importy na bezpośrednie z CDN!
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const loginButton = document.getElementById('login-button');
+        const errorMessageElement = document.getElementById('error-message');
+
+        loginButton.addEventListener('click', async () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+
+            errorMessageElement.style.display = 'none'; // Ukryj poprzednie błędy
+
+            try {
+                // Wywołanie metody logowania Firebase
+                await signInWithEmailAndPassword(auth, email, password);
+                
+                // Pomyślne logowanie, przekieruj użytkownika
+                window.location.href = 'index.html'; // Przekieruj na stronę główną lub konfiguracyjną
+            } catch (error) {
+                // Obsługa błędów logowania
+                console.error("Błąd logowania:", error.code, error.message);
+                // W tym przypadku error.code będzie dostępne, jeśli problem pochodzi z Firebase Auth
+                errorMessageElement.textContent = "Błąd logowania: " + getPolishAuthErrorMessage(error.code);
+                errorMessageElement.style.display = 'block';
+            }
+        });
+
+        // Funkcja tłumacząca kody błędów Firebase na polski (przykładowa)
+        function getPolishAuthErrorMessage(errorCode) {
+            switch (errorCode) {
+                case 'auth/invalid-email':
+                    return 'Nieprawidłowy adres e-mail.';
+                case 'auth/user-disabled':
+                    return 'Konto użytkownika zostało zablokowane.';
+                case 'auth/user-not-found':
+                    return 'Użytkownik o podanym adresie e-mail nie istnieje.';
+                case 'auth/wrong-password':
+                    return 'Nieprawidłowe hasło.';
+                case 'auth/network-request-failed':
+                    return 'Błąd sieci. Sprawdź połączenie internetowe.';
+                case 'auth/too-many-requests':
+                    return 'Zbyt wiele prób logowania. Spróbuj ponownie później.';
+                default:
+                    return 'Wystąpił nieznany błąd uwierzytelniania.'; // Dodałem 'uwierzytelniania' dla jasności
+            }
+        }
+  </script>
+
+</body>
+</html>

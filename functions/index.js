@@ -36,8 +36,15 @@ exports.agregujDziennie = onSchedule(
       const temps = pomiary.map((p) => p.temperatura);
       const wilgs = pomiary.map((p) => p.wilgotnosc);
 
-      const min = (arr) => Math.min(...arr);
-      const max = (arr) => Math.max(...arr);
+      const findExtreme = (arr, key, mode) => {
+        const sorted = [...arr].sort((a, b) => mode === 'min' ? a[key] - b[key] : b[key] - a[key]);
+        const best = sorted[0];
+        const godzina = new Date(best.timestamp).toISOString().split('T')[1].slice(0, 5); // "HH:MM"
+        return {
+          wartosc: best[key],
+          godzina,
+        };
+      };
       const avg = (arr) => +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1);
 
       const dataISO = wczoraj.toISOString().split('T')[0];
@@ -45,13 +52,17 @@ exports.agregujDziennie = onSchedule(
       const zestawienie = {
         data: dataISO,
         temperatura: {
-          min: min(temps),
-          max: max(temps),
+          min: temperaturaMin.wartosc,
+          min_godzina: temperaturaMin.godzina,
+          max: temperaturaMax.wartosc,
+          max_godzina: temperaturaMax.godzina,
           srednia: avg(temps),
         },
         wilgotnosc: {
-          min: min(wilgs),
-          max: max(wilgs),
+          min: wilgotnoscMin.wartosc,
+          min_godzina: wilgotnoscMin.godzina,
+          max: wilgotnoscMax.wartosc,
+          max_godzina: wilgotnoscMax.godzina,
           srednia: avg(wilgs),
         },
       };
